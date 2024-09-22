@@ -40,13 +40,23 @@ jobs:
       - name: Get coverage report paths
         id: coverage-paths
         run: |
-          unittests=$(find build -name coverage-unittests.xml)
-          integtests=$(find build -name coverage-integtests.xml)
+          unittests_path="coverage-unittests.xml"
+          integtests_path="coverage-integtests.xml"
+
+          if [ -f $unittests_path ]; then
+            unittests=$unittests_path
+          fi
+
+          if [ -f $integtests_path ]; then
+            integtests=$integtests_path
+          fi
+
           paths="${unittests}${integtests:+,$integtests}"
           if [ -z "$paths" ]; then
             echo "Error: No coverage files found"
             exit 1
           fi
+
           echo "csv=$paths" >> $GITHUB_OUTPUT
 
       - name: Run SonarScanner

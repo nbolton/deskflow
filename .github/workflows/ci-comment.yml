@@ -31,6 +31,7 @@ jobs:
           pattern: summary-*
           merge-multiple: true
           path: summaries
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Debug
         run: ls -R

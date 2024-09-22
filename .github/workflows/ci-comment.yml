@@ -12,7 +12,7 @@ on:
         description: "The PR number to comment on"
         required: true
   workflow_run:
-    workflows: ["CI"]
+    workflows: ["CI", "CI comment test"]
     types:
       - completed
 

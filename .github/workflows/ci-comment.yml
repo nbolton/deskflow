@@ -38,8 +38,8 @@ jobs:
       - name: Merge summaries
         id: summary
         run: |
-          echo "message=<<EOF" >> $GITHUB_OUTPUT
-          for file in summaries/summary-*; do
+          echo "message<<EOF" >> $GITHUB_OUTPUT
+          for file in summaries/*; do
             echo $(cat $file) >> $GITHUB_OUTPUT
           done
           echo "EOF" >> $GITHUB_OUTPUT

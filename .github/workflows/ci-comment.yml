@@ -3,14 +3,6 @@
 name: CI comment
 
 on:
-  workflow_dispatch:
-    inputs:
-      workflow_run_id:
-        description: "The ID of the workflow to download artifacts from"
-        required: true
-      pr_number:
-        description: "The PR number to comment on"
-        required: true
   workflow_run:
     workflows: ["CI", "CI comment test"]
     types:
@@ -18,8 +10,7 @@ on:
 
 jobs:
   summary:
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.event == 'pull_request')
-
+    if: github.event.workflow_run.event == 'pull_request'
     runs-on: ubuntu-latest
 
     steps:
@@ -27,7 +18,7 @@ jobs:
         id: download
         uses: actions/download-artifact@v4
         with:
-          run-id: ${{ github.event.workflow_run.id || github.event.inputs.workflow_run_id }}
+          run-id: ${{ github.event.workflow_run.id }}
           pattern: summary-*
           merge-multiple: true
           path: summaries
@@ -49,7 +40,7 @@ jobs:
         if: steps.summary.outputs.message
         uses: marocchino/sticky-pull-request-comment@v2
         with:
-          number: ${{ github.event.inputs.pr_number }}
+          number: ${{ github.event.workflow_run.pull_requests.number }}
           header: ${{ github.event.workflow_run.name }}
           message: ${{ steps.summary.outputs.message }}
 
@@ -57,6 +48,6 @@ jobs:
         if: ${{ !steps.summary.outputs.message }}
         uses: marocchino/sticky-pull-request-comment@v2
         with:
-          number: ${{ github.event.inputs.pr_number }}
+          number: ${{ github.event.workflow_run.pull_requests.number }}
           header: ${{ github.event.workflow_run.name }}
           delete: true

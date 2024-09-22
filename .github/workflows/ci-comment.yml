@@ -1,0 +1,61 @@
+# We use `workflow_run` to securely add a comment to the PR.
+# PRs opened by external forks do not have write access to their PR, so can't add comments.
+name: CI comment
+
+on:
+  workflow_dispatch:
+    inputs:
+      workflow_run_id:
+        description: "The ID of the workflow to download artifacts from"
+        required: true
+      pr_number:
+        description: "The PR number to comment on"
+        required: true
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+
+jobs:
+  summary:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.event == 'pull_request')
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download summaries
+        id: download
+        uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ github.event.workflow_run.id || github.event.inputs.workflow_run_id }}
+          pattern: summary-*
+          merge-multiple: true
+          path: summaries
+
+      - name: Debug
+        run: ls -R
+
+      - name: Merge summaries
+        id: summary
+        run: |
+          echo "message=<<EOF" >> $GITHUB_OUTPUT
+          for file in summaries/summary-*; do
+            echo $(cat $file) >> $GITHUB_OUTPUT
+          done
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Set PR comment
+        if: steps.summary.outputs.message
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          number: ${{ github.event.inputs.pr_number }}
+          header: ${{ github.event.workflow_run.name }}
+          message: ${{ steps.summary.outputs.message }}
+
+      - name: Delete PR comment
+        if: ${{ !steps.summary.outputs.message }}
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          number: ${{ github.event.inputs.pr_number }}
+          header: ${{ github.event.workflow_run.name }}
+          delete: true

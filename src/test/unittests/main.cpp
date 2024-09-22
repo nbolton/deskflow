@@ -31,7 +31,7 @@ using deskflow::test::ExitTimeout;
 
 const auto testDir = "tmp/test";
 
-int main(int argc, char **argv) {
+  int main(int argc, char **argv) {
   // HACK: Unit tests should not use the filesystem.
   std::filesystem::create_directories(testDir);
 

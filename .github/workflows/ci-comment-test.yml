@@ -1,0 +1,18 @@
+name: CI comment test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  summary:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Test file
+        run: echo "Test file" > test.txt
+
+      - name: Upload summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: summary-test
+          path: test.txt

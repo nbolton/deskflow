@@ -41,7 +41,7 @@ jobs:
           fi
 
           echo "message<<EOF" >> $GITHUB_OUTPUT
-          echo "## CI Summary"
+          echo "## CI Summary" >> $GITHUB_OUTPUT
 
           for file in summaries/*; do
             echo $(cat $file) >> $GITHUB_OUTPUT

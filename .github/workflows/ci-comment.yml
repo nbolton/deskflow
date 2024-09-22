@@ -36,16 +36,11 @@ jobs:
           done
           echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Print PR number
-        run: |
-          echo pull_requests.number=${{ github.event.workflow_run.pull_requests.number }}
-          echo pull_requests[0].number=${{ github.event.workflow_run.pull_requests[0].number }}
-
       - name: Set PR comment
         if: steps.summary.outputs.message
         uses: marocchino/sticky-pull-request-comment@v2
         with:
-          number: ${{ github.event.workflow_run.pull_requests.number }}
+          number: ${{ github.event.workflow_run.pull_requests[0].number }}
           header: ${{ github.event.workflow_run.name }}
           message: ${{ steps.summary.outputs.message }}
 
@@ -53,6 +48,6 @@ jobs:
         if: ${{ !steps.summary.outputs.message }}
         uses: marocchino/sticky-pull-request-comment@v2
         with:
-          number: ${{ github.event.workflow_run.pull_requests.number }}
+          number: ${{ github.event.workflow_run.pull_requests[0].number }}
           header: ${{ github.event.workflow_run.name }}
           delete: true

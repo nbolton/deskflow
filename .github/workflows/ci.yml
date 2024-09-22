@@ -25,11 +25,21 @@ env:
   PACKAGE_BUILD: ${{ !github.event.pull_request.draft }}
   PACKAGE_UPLOAD: ${{ !github.event.pull_request.draft }}
 
-permissions:
-  pull-requests: write
-
 jobs:
-  setup:
+  # Quality gate to allow PR merge, used in the branch protection rules.
+  ci-passed:
+    runs-on: ubuntu-latest
+    needs: [lint-cmake, lint-clang, windows, macos, linux, unix]
+
+    steps:
+      - run: echo "CI passed" > $GITHUB_STEP_SUMMARY
+
+  # Summary of test results, combined from test result artifacts.
+  # Runs even if the tests fail to provide a summary of the failures.
+  test-results:
+    needs: [windows, macos, linux]
+    if: always()
+
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
@@ -37,11 +47,65 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Test setup
-        uses: ./.github/actions/run-tests-setup
+      - name: Summary table
+        id: markdown-table
+        uses: ./.github/actions/markdown-table
+        with:
+          row-artifact-pattern: test-result-*
+          table-header: |
+            # Test results
+            | Job name | Unit tests | Integration tests |
+            | --- | --- | --- |
+
+      - name: Set step summary
+        run: |
+          table="${{ steps.markdown-table.outputs.markdown }}"
+
+          if [ -z "$table" ]; then
+            echo "No test results found" > $GITHUB_STEP_SUMMARY
+            exit 1
+          else
+            echo "$table" > $GITHUB_STEP_SUMMARY
+          fi
+
+          count=$(echo -n "$table" | grep -o "❌" | wc -l)
+          if [ $count -gt 0 ]; then
+            echo "❌🔬 Tests failed: $count" > ci-summary.md
+          fi
+
+      - name: Upload CI summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: summary-tests
+          path: ci-summary.md
+
+  lint-cmake:
+    if: ${{ github.event_name == 'pull_request' }}
+    uses: ./.github/workflows/lint-cmake.yml
+
+  lint-clang:
+    if: ${{ github.event_name == 'pull_request' }}
+    uses: ./.github/workflows/lint-clang.yml
+
+  analyse-valgrind:
+    if: false
+    #if: ${{ github.event_name == 'pull_request' }}
+    uses: ./.github/workflows/valgrind-analysis.yml
+
+  analyse-codeql:
+    if: false
+    #if: ${{ github.event_name == 'pull_request' }}
+    uses: ./.github/workflows/codeql-analysis.yml
+
+  analyse-sonarcloud:
+    if: false
+    #if: ${{ github.event_name == 'pull_request' }}
+    uses: ./.github/workflows/sonarcloud-analysis.yml
+    secrets:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
   windows:
-    needs: setup
+    if: false
     name: ${{ matrix.target.name }}
     runs-on: ${{ matrix.target.runs-on }}
     container: ${{ matrix.target.container }}
@@ -129,7 +193,7 @@ jobs:
           package-version: ${{ env.DESKFLOW_VERSION }}
 
   macos:
-    needs: setup
+    if: false
     name: ${{ matrix.target.name }}
     runs-on: ${{ matrix.target.os }}
     timeout-minutes: ${{ matrix.target.timeout }}
@@ -151,11 +215,11 @@ jobs:
             arch: arm64
             shell: "/usr/bin/arch -arch arm64e /bin/bash --noprofile --norc -eo pipefail {0}"
 
-          - name: ${{ vars.CI_MAC_INTEL_NAME || 'macos-13-x64' }}
-            timeout: 20
-            os: ${{ vars.CI_MAC_INTEL_RUNNER || 'macos-13' }}
-            arch: x64
-            shell: "bash"
+          # - name: ${{ vars.CI_MAC_INTEL_NAME || 'macos-13-x64' }}
+          #   timeout: 20
+          #   os: ${{ vars.CI_MAC_INTEL_RUNNER || 'macos-13' }}
+          #   arch: x64
+          #   shell: "bash"
 
     steps:
       - name: Checkout
@@ -212,6 +276,7 @@ jobs:
           package-version: ${{ env.DESKFLOW_VERSION }}
 
   linux-matrix:
+    if: false
     runs-on: ubuntu-latest
 
     outputs:
@@ -230,7 +295,8 @@ jobs:
           jq-filter: .distro |= map(select(.["runs-on"] | contains("arm64") | not))
 
   linux:
-    needs: [setup, linux-matrix]
+    if: false
+    needs: [linux-matrix]
     name: linux-${{ matrix.distro.name }}
     runs-on: ${{ matrix.distro.runs-on }}
     container: ${{ matrix.distro.container }}
@@ -294,7 +360,7 @@ jobs:
 
   # Technically, "unix" is a misnomer, but we use it here to mean "Unix-like BSD-derived".
   unix:
-    needs: setup
+    if: false
     name: unix-${{ matrix.distro.name }}
     runs-on: ${{ vars.CI_UNIX_RUNNER || 'ubuntu-24.04' }}
     timeout-minutes: 20

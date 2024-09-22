@@ -28,7 +28,7 @@ TEST(StringTests, format_formatWithArguments_formatedString) {
 
   String result = string::format(format, arg1, arg2);
 
-  EXPECT_EQ("%answer=42", result);
+  EXPECT_EQ("%answer=41", result);
 }
 
 TEST(StringTests, findReplaceAll_inputString_replacedString) {

@@ -106,7 +106,7 @@ TEST_F(IpcTests, sendMessageToServer) {
   m_events.removeHandler(m_events.forIpcServer().messageReceived(), &server);
   m_events.cleanupQuitTimeout();
 
-  EXPECT_EQ("test", m_sendMessageToServer_receivedString);
+  EXPECT_EQ("test!", m_sendMessageToServer_receivedString);
 }
 
 TEST_F(IpcTests, sendMessageToClient) {

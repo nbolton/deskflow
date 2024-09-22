@@ -58,7 +58,7 @@ bool hasArg(const QString &arg, const QStringList &args) {
       args, [&arg](const QString &a) { return a == arg; });
 }
 
-int main(int argc, char *argv[]) {
+  int main(int argc, char *argv[]) {
 
 #if defined(Q_OS_MAC)
   /* Workaround for QTBUG-40332 - "High ping when QNetworkAccessManager is

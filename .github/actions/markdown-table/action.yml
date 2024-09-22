@@ -1,0 +1,48 @@
+name: Markdown table
+description: Creates a markdown table from row artifacts.
+
+inputs:
+  table-header:
+    description: The header of the table.
+    required: true
+
+  row-artifact-pattern:
+    description: The pattern to match the artifacts.
+    required: true
+
+outputs:
+  markdown:
+    description: The generated markdown table.
+
+runs:
+  using: composite
+
+  steps:
+    - name: Download all rows
+      uses: actions/download-artifact@v4
+      with:
+        pattern: ${{ inputs.row-artifact-pattern }}
+        merge-multiple: true
+        path: rows
+
+    - name: Build table
+      run: |
+        # Builds a markdown table from the row artifacts.
+
+        header="${{ inputs.table-header }}"
+
+        rows=""
+        for file in rows/*; do
+          rows+=$(cat $file)
+          rows+=$'\n'
+        done
+
+        # Strip any trailing whitespace so the markdown table is formatted correctly.
+        header=$(echo $header | sed 's/ *$//')
+        rows=$(echo $rows | sed 's/ *$//')
+
+        echo "markdown<<EOF" >> $GITHUB_OUTPUT
+        echo "$header" >> $GITHUB_OUTPUT
+        echo "$rows" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+      shell: bash

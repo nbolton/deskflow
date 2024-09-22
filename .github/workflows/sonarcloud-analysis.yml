@@ -78,29 +78,24 @@ jobs:
           QT_QPA_PLATFORM: offscreen
         run: cmake --build build --target coverage-unittests
 
-      # Retry integtests coverae as gcovr intermittently fails to parse .gcda files.
       - name: Integration tests coverage
         env:
           QT_QPA_PLATFORM: offscreen
         run: cmake --build build --target coverage-integtests
 
-      - name: Get coverage report paths
-        id: coverage-paths
+      - name: Find files
+        id: find
         run: |
           unittests=$(find build -name coverage-unittests.xml)
           integtests=$(find build -name coverage-integtests.xml)
-          paths="${unittests}${integtests:+,$integtests}"
-          if [ -z "$paths" ]; then
-            echo "Error: No coverage files found"
-            exit 1
-          fi
-          echo "csv=$paths" >> $GITHUB_OUTPUT
+          echo "unittests=$unittests" >> $GITHUB_OUTPUT
+          echo "integtests=$integtests" >> $GITHUB_OUTPUT
 
-      - name: Run SonarScanner
-        run: |
-          export PATH=$HOME/.sonar/sonar-scanner-$SONAR_SCANNER_VERSION-linux-x64/bin:$PATH
-          sonar-scanner \
-            -Dsonar.coverageReportPaths=${{ steps.coverage-paths.outputs.csv }} \
-            -Dsonar.cfamily.threads=${{ env.CPU_CORE_COUNT }}
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports
+          path: |
+            ${{ steps.find.outputs.unittests }}
+            ${{ steps.find.outputs.integtests }}
+          if-no-files-found: error

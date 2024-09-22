@@ -1,15 +1,16 @@
-# Uses `workflow_run` to securely add a comment to the PR that triggered CI.
-#
-# Important: For security, the `workflow_run` trigger runs the workflow from the default branch,
-# so any changes to this workflow must be made in the default branch to take effect.
-#
-# This workflow is neccesary because PRs opened by external forks do not have write access to
-# their PR, so the PR-triggered workflow can't add comments to the PR.
-# If this was in the CI workflow, it'd be tidier and easier to debug but unfortunately that
-# isn't possible due to the lower security context that the CI workflow runs in.
+# We use `workflow_run` to securely add a comment to the PR.
+# PRs opened by external forks do not have write access to their PR, so can't add comments.
 name: CI comment
 
 on:
+  workflow_dispatch:
+    inputs:
+      workflow_run_id:
+        description: "The ID of the workflow to download artifacts from"
+        required: true
+      pr_number:
+        description: "The PR number to comment on"
+        required: true
   workflow_run:
     workflows: ["CI"]
     types:
@@ -17,7 +18,8 @@ on:
 
 jobs:
   summary:
-    if: github.event.workflow_run.event == 'pull_request'
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.event == 'pull_request')
+
     runs-on: ubuntu-latest
 
     steps:
@@ -25,43 +27,28 @@ jobs:
         id: download
         uses: actions/download-artifact@v4
         with:
-          run-id: ${{ github.event.workflow_run.id }}
+          run-id: ${{ github.event.workflow_run.id || github.event.inputs.workflow_run_id }}
           pattern: summary-*
           merge-multiple: true
           path: summaries
-          github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Get workflow URL
-        id: workflow-url
-        run: |
-          repo_url="${{ github.server_url }}/${{ github.repository }}"
-          echo "url=$repo_url/actions/runs/${{ github.event.workflow_run.id }}" >> $GITHUB_OUTPUT
-        shell: bash
+      - name: Debug
+        run: ls -R
 
       - name: Merge summaries
         id: summary
         run: |
-          files=$(ls summaries)
-          if [ -z "$files" ]; then
-            echo "No summaries found"
-            exit 0
-          fi
-
-          echo "message<<EOF" >> $GITHUB_OUTPUT
-          echo "## CI Summary" >> $GITHUB_OUTPUT
-
-          for file in summaries/*; do
+          echo "message=<<EOF" >> $GITHUB_OUTPUT
+          for file in summaries/summary-*; do
             echo $(cat $file) >> $GITHUB_OUTPUT
           done
-
-          echo "[Full summary](${{ steps.workflow-url.outputs.url }})" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Set PR comment
         if: steps.summary.outputs.message
         uses: marocchino/sticky-pull-request-comment@v2
         with:
-          number: ${{ github.event.workflow_run.pull_requests[0].number }}
+          number: ${{ github.event.inputs.pr_number }}
           header: ${{ github.event.workflow_run.name }}
           message: ${{ steps.summary.outputs.message }}
 
@@ -69,6 +56,6 @@ jobs:
         if: ${{ !steps.summary.outputs.message }}
         uses: marocchino/sticky-pull-request-comment@v2
         with:
-          number: ${{ github.event.workflow_run.pull_requests[0].number }}
+          number: ${{ github.event.inputs.pr_number }}
           header: ${{ github.event.workflow_run.name }}
           delete: true

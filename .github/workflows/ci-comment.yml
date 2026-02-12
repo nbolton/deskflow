@@ -65,9 +65,9 @@ jobs:
         run: |
           ls -R
 
-          files=$(find $dir -type f)
+          files=$(find summaries -type f 2>/dev/null)
           if [ -z "$files" ]; then
-            echo "No files found in dir: $dir"
+            echo "No files found in dir: summaries"
             exit 0
           fi
 
